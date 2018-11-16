@@ -44,15 +44,14 @@ public class CharacterMovement : MonoBehaviour
 		{
 			Jump();
 		}
-		print(_rb.velocity.magnitude);
-
 		//print(_rb.velocity.normalized.x - _surfaceAngle.x);
 	}
 
 	void FixedUpdate()
 	{
-		EvaluateMovement();
 		DetectSlope();
+		EvaluateMovement();
+		//print(_rb.velocity.magnitude);
 	}
 
 	void DetectSlope()
@@ -60,8 +59,8 @@ public class CharacterMovement : MonoBehaviour
 		Vector2 originLeft = raycastOrigins.bottomLeft - new Vector2(0, skinWidth);
 		Vector2 originRight = raycastOrigins.bottomRight - new Vector2(0, skinWidth);
 
-		RaycastHit2D hitLeft = Physics2D.Raycast(originLeft, Vector2.right * -1f, 0.1f, CollisionMask);
-		RaycastHit2D hitRight = Physics2D.Raycast(originRight, Vector2.right * 1f, 0.1f, CollisionMask);
+		RaycastHit2D hitLeft = Physics2D.Raycast(originLeft, Vector2.right * -1f, 0.5f, CollisionMask);
+		RaycastHit2D hitRight = Physics2D.Raycast(originRight, Vector2.right * 1f, 0.5f, CollisionMask);
 		if (hitLeft)
 		{
 			slopeAngle = -Vector2.Angle(hitLeft.normal, Vector2.up);
@@ -97,57 +96,100 @@ public class CharacterMovement : MonoBehaviour
 		//print(Mathf.Sign(slopeAngle));
 
 		float dot = Vector2.Dot(_surfaceAngle, _rb.velocity);
+		Vector2 vel = Vector3.RotateTowards(Vector2.right, _surfaceAngle, 10f, 0f);
+		Vector2 velNormal = vel.normalized;
 		//print(dot);
 
 		if (_moveX < 0)
 		{
-			if (dot > -MaxSpeed)
+			if (Mathf.Sign(slopeAngle) < 0)
 			{
-				if (Mathf.Sign(slopeAngle) < 0)
+				if (_rb.velocity.x > MaxSpeed * velNormal.x)
 				{
-					Vector2 vel = Vector3.RotateTowards(Vector2.right, _surfaceAngle, 10f, 0f);
-					vel = vel * -Mathf.Sign(slopeAngle) * _moveX * Acceleration * Time.deltaTime;
-					Debug.DrawRay(transform.position, vel * 10f, Color.blue, 1f);
-					Accelerate(vel.x, vel.y);
+					float velX = Mathf.Clamp(MaxSpeed * velNormal.x - _rb.velocity.x, 0, Acceleration * Time.deltaTime);
 
-					//print("hej");
+					Accelerate(velX, 0);
+					Debug.DrawRay(transform.position, velNormal * 10f, Color.blue, .1f);
+				}
+				if (_rb.velocity.y < MaxSpeed * velNormal.y)
+				{
+					float velY = Mathf.Clamp(MaxSpeed * velNormal.y - _rb.velocity.y, 0, Acceleration * Time.deltaTime);
 
-				}
-				else if (Mathf.Sign(slopeAngle) > 0)
-				{
-					Vector2 vel = Vector3.RotateTowards(Vector2.right, _surfaceAngle, 10f, 0f);
-					vel = vel * Mathf.Sign(slopeAngle) * _moveX * Acceleration * Time.deltaTime;
-					Debug.DrawRay(transform.position, vel * 10f, Color.blue, 1f);
-					Accelerate(vel.x, vel.y);
-				}
-				else
-				{
-					Accelerate(-Acceleration * Time.deltaTime, 0);
+					Accelerate(0, velY);
+					Debug.DrawRay(transform.position, velNormal * 10f, Color.blue, .1f);
 				}
 			}
+			else if (Mathf.Sign(slopeAngle) > 0)
+			{
+				if (_rb.velocity.x > MaxSpeed * velNormal.x)
+				{
+					float velX = -Mathf.Clamp(MaxSpeed * velNormal.x - _rb.velocity.x, 0, Acceleration * Time.deltaTime);
+
+					Accelerate(velX, 0);
+					Debug.DrawRay(transform.position, velNormal * 10f, Color.blue, .1f);
+				}
+				if (_rb.velocity.y < MaxSpeed * velNormal.y)
+				{
+					float velY = Mathf.Clamp(MaxSpeed * velNormal.y - _rb.velocity.y, 0, Acceleration * Time.deltaTime);
+
+					Accelerate(0, velY);
+					Debug.DrawRay(transform.position, velNormal * 10f, Color.blue, .1f);
+				}
+			}
+			else
+			{
+				Accelerate(-Acceleration * Time.deltaTime, 0);
+			}
+
 		}
 		if (_moveX > 0)
 		{
-			if (dot < MaxSpeed)
+
+			if (Mathf.Sign(slopeAngle) > 0)
 			{
-				if (Mathf.Sign(slopeAngle) > 0)
+				if (_rb.velocity.x < MaxSpeed * velNormal.x)
 				{
-					Vector2 vel = Vector3.RotateTowards(Vector2.right, _surfaceAngle, 10f, 0f);
-					vel = vel * Mathf.Sign(slopeAngle) * _moveX * Acceleration * Time.deltaTime;
-					Debug.DrawRay(transform.position, vel * 10f, Color.blue, .1f);
-					Accelerate(vel.x, vel.y);
+					float velX = Mathf.Clamp(MaxSpeed * velNormal.x - _rb.velocity.x, 0, Acceleration * Time.deltaTime);
+
+					Accelerate(velX, 0);
+					Debug.DrawRay(transform.position, velNormal * 10f, Color.blue, .1f);
 				}
-				else if(Mathf.Sign(slopeAngle) < 0)
+				if (_rb.velocity.y < MaxSpeed * velNormal.y)
 				{
-					Vector2 vel = Vector3.RotateTowards(Vector2.right, _surfaceAngle, 10f, 0f);
-					vel = vel * -Mathf.Sign(slopeAngle) * _moveX * Acceleration * Time.deltaTime;
-					Debug.DrawRay(transform.position, vel * 10f, Color.blue, .1f);
-					Accelerate(vel.x, vel.y);
+					float velY = Mathf.Clamp(MaxSpeed * velNormal.y - _rb.velocity.y, 0, Acceleration * Time.deltaTime);
+
+					Accelerate(0, velY);
+					Debug.DrawRay(transform.position, velNormal * 10f, Color.blue, .1f);
 				}
-				else
+
+			}
+			else if (Mathf.Sign(slopeAngle) < 0)
+			{
+				Vector2 calculatedSpeed = new Vector2(0, 0);
+
+				if (_rb.velocity.x < MaxSpeed * velNormal.x)
 				{
-					Accelerate(Acceleration * Time.deltaTime, 0);
+					float velX = Mathf.Clamp(MaxSpeed * velNormal.x - _rb.velocity.x, 0, Acceleration * Time.deltaTime);
+
+					calculatedSpeed =  new Vector2(velX, calculatedSpeed.y);
+					Debug.DrawRay(transform.position, velNormal * 10f, Color.cyan, .1f);
 				}
+				if (_rb.velocity.y < MaxSpeed * velNormal.y)
+				{
+					float velY = Mathf.Clamp(MaxSpeed * velNormal.y - _rb.velocity.y, 0, Acceleration * Time.deltaTime);
+
+					calculatedSpeed = new Vector2(calculatedSpeed.x, velY);
+					Debug.DrawRay(transform.position, velNormal * 10f, Color.yellow, 1f);
+				}
+
+				Accelerate(calculatedSpeed.x, calculatedSpeed.y);
+				//vel = vel * -Mathf.Sign(slopeAngle) * _inputX * Acceleration * Time.deltaTime;
+				//Debug.DrawRay(transform.position, vel * 10f, Color.blue, .1f);
+				//Accelerate(vel.x, vel.y);
+			}
+			else
+			{
+				Accelerate(Acceleration * Time.deltaTime, 0);
 			}
 
 		}
@@ -157,16 +199,16 @@ public class CharacterMovement : MonoBehaviour
 	}
 	void EvaluateMovementOld()
 	{
-		//if (_moveX < 0)
+		//if (_inputX < 0)
 		//{
-		//	if (_rb.velocity.x > MaxSpeed * Mathf.Sign(_moveX))
+		//	if (_rb.velocity.x > MaxSpeed * Mathf.Sign(_inputX))
 		//	{
 		//		Accelerate(-Mathf.Clamp(MaxSpeed + _rb.velocity.x, 0, Acceleration * Time.deltaTime));
 		//	}
 		//}
-		//if (_moveX > 0)
+		//if (_inputX > 0)
 		//{
-		//	if (_rb.velocity.x < MaxSpeed * Mathf.Sign(_moveX))
+		//	if (_rb.velocity.x < MaxSpeed * Mathf.Sign(_inputX))
 		//	{
 		//		Accelerate(Mathf.Clamp(MaxSpeed + -_rb.velocity.x, 0, Acceleration * Time.deltaTime));
 		//	}
@@ -178,6 +220,7 @@ public class CharacterMovement : MonoBehaviour
 
 	void Accelerate(float x, float y)
 	{
+		Debug.Log(x + " " + y);
 		_rb.velocity = _rb.velocity + new Vector2(x, y);
 		//_rb.velocity = _rb.velocity + new Vector2(x, 0);
 	}
