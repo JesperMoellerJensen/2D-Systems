@@ -6,28 +6,29 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D))]
 public class SeniPhysicsController : MonoBehaviour
 {
-    // ------------------- DEBUG -------------------
-    public bool Debug_Ground { get { return _isGrounded; } }
-    public bool Debug_Sliding { get { return _isSliding; } }
-    public bool Debug_Blocked { get { return _movementBlocked; } }
-    public float Debug_Slope { get { return _slopeAngle; } }
-    public float Debug_Velocity { get { return _rb.velocity.magnitude; } }
-    // ------------------- DEBUG -------------------
+	// ------------------- DEBUG -------------------
+	public bool Debug_Ground { get { return _isGrounded; } }
+	public bool Debug_Sliding { get { return _isSliding; } }
+	public bool Debug_Blocked { get { return _movementBlocked; } }
+	public float Debug_Slope { get { return _slopeAngle; } }
+	public float Debug_Velocity { get { return _rb.velocity.magnitude; } }
+	// ------------------- DEBUG -------------------
 
-    public float MaxSpeed = 10f;
+	public float MaxSpeed = 10f;
 	public float Acceleration = 50f;
 	public float Deacceleration = 50f;
 	public float AirAcceleration = 10f;
 	public float JumpForce = 10f;
 	public float WalkableSlopeAngle = 45f;
 	public float GroundRayTraceRange = 0.1f;
+	public float AlignWithGroundSpeed = 10f;
 	public LayerMask CollisionMask;
 
 	private Rigidbody2D _rb;
 	private CharacterBodyRotation _bodyRotation;
 	private float _inputX;
-    private float _slopeAngle;
-    private bool _isGrounded;
+	private float _slopeAngle;
+	private bool _isGrounded;
 	private bool _movementBlocked;
 	private bool _isSliding;
 
@@ -37,13 +38,17 @@ public class SeniPhysicsController : MonoBehaviour
 		_bodyRotation = GetComponentInChildren<CharacterBodyRotation>();
 	}
 
-	void Update()
+	private void FixedUpdate()
 	{
 		DetectSlopeAndRotatePlayer();
+	}
+
+	void Update()
+	{
 		_inputX = Input.GetAxisRaw("Horizontal");
 
 
-		if (_isGrounded)
+		if (_isGrounded && _isSliding == false)
 		{
 			if (Input.GetButtonDown("Jump"))
 			{
@@ -73,70 +78,72 @@ public class SeniPhysicsController : MonoBehaviour
 		//Debug.Log(_rb.velocity.magnitude);
 	}
 
-	bool DetectWalls()
-	{
-		bool check = false;
-		Vector2 raycastOrigin1 = transform.position + transform.right * 0.2f;
-		RaycastHit2D hit1 = Physics2D.Raycast(raycastOrigin1, transform.right, 0.5f, CollisionMask);
-		Debug.DrawRay(raycastOrigin1, transform.right * 0.5f, Color.blue, 0.01f);
-
-		Vector2 raycastOrigin2 = transform.position + -transform.right * 0.2f;
-		RaycastHit2D hit2 = Physics2D.Raycast(raycastOrigin2, -transform.right, 0.5f, CollisionMask);
-		Debug.DrawRay(raycastOrigin2, -transform.right * 0.5f, Color.yellow, 0.01f);
-
-		if (hit1 || hit2)
-		{
-			check = true;
-		}
-
-		return check;
-	}
-
 	void DetectSlopeAndRotatePlayer()
 	{
-		Vector2 raycastOrigin = transform.position + transform.up * -0.48f;
-		RaycastHit2D hit = Physics2D.Raycast(raycastOrigin, -transform.up, 1f, CollisionMask);
-		Debug.DrawRay(raycastOrigin, -transform.up * 0.2f, Color.red, 0.01f);
+		Vector2 raycastOriginLeft = transform.position + transform.right * -0.2f + transform.up * 0.25f;
+		Vector2 raycastOriginRight = transform.position + transform.right * 0.2f + transform.up * 0.25f;
+		RaycastHit2D hitLeft = Physics2D.Raycast(raycastOriginLeft, -transform.up, GroundRayTraceRange, CollisionMask);
+		RaycastHit2D hitRight = Physics2D.Raycast(raycastOriginRight, -transform.up, GroundRayTraceRange, CollisionMask);
+		Debug.DrawRay(raycastOriginLeft, -transform.up * GroundRayTraceRange, Color.red);
+		Debug.DrawRay(raycastOriginRight, -transform.up * GroundRayTraceRange, Color.yellow);
 
-		_slopeAngle = -Vector2.Angle(hit.normal, Vector2.up);
 
-		if (hit.distance <= GroundRayTraceRange)
+		Vector2 perpendicularLine = hitLeft.point - hitRight.point;
+		// rotate 90� Clockwise
+		Vector2 normal = new Vector2(perpendicularLine.y, -perpendicularLine.x).normalized;
+
+		if (hitLeft || hitRight)
 		{
-			if (Mathf.Abs(_slopeAngle) < WalkableSlopeAngle)
+			bool LeftRayOnSlope = false;
+			bool RightRayOnSlope = false;
+			float avarageDistance = Mathf.Infinity;
+			if (hitLeft)
 			{
-				_isSliding = false;
-				_isGrounded = hit;
+				LeftRayOnSlope = IsOnSlope(hitLeft.normal);
+			}
+			if (hitRight)
+			{
+				RightRayOnSlope = IsOnSlope(hitRight.normal);
+			}
 
-				//rotates player to surface normal
-				if (hit)
+
+			if (hitLeft && !hitRight)
+			{
+				avarageDistance = hitLeft.distance;
+				if (LeftRayOnSlope == false)
 				{
-					transform.up = hit.normal;
+					RotateTransformUp(hitLeft.normal);
 				}
-				else
+			}
+			else if (!hitLeft && hitRight)
+			{
+				avarageDistance = hitRight.distance;
+				if (RightRayOnSlope == false)
 				{
-					transform.up = Vector2.up;
+					RotateTransformUp(hitRight.normal);
 				}
+			}
+			else if (hitLeft && hitRight)
+			{
+				avarageDistance = (hitLeft.distance + hitRight.distance) / 2;
+				if (IsOnSlope(normal) == false)
+				{
+					RotateTransformUp(normal);
+				}
+			}
+
+			if(avarageDistance < 0.3f)
+			{
+				_isGrounded = true;
+				Debug.Log("Yes " + avarageDistance);
 			}
 			else
 			{
-			    if (DetectWalls())
-			    {
-			        _isSliding = true;
-			    }
-			    else
-			    {
-			        _isSliding = false;
-			    }
-                _isGrounded = false;
-				transform.up = Vector2.up;
+				_isGrounded = false;
+				Debug.Log("No " + avarageDistance);
 			}
-		}
-		else
-		{
-			_isGrounded = false;
-			transform.up = Vector2.up;
 
-			if (DetectWalls())
+			if (LeftRayOnSlope && RightRayOnSlope)
 			{
 				_isSliding = true;
 			}
@@ -144,6 +151,11 @@ public class SeniPhysicsController : MonoBehaviour
 			{
 				_isSliding = false;
 			}
+		}
+		else
+		{
+			_isGrounded = false;
+			RotateTransformUp(Vector2.up);
 		}
 	}
 
@@ -174,22 +186,29 @@ public class SeniPhysicsController : MonoBehaviour
 		_bodyRotation.PlayerMoveDir = Mathf.RoundToInt(Mathf.Sign(_inputX));
 	}
 
-	float CalculateDotProduct()
-	{
-		Vector2 currentVel = _rb.velocity;
-		Vector2 currentDirection = transform.right;
-		Vector2 currentDirectionNormal = currentDirection.normalized;
-
-		//Vector2 vP = CurrentDirectionNormal * dot;
-
-		return Vector2.Dot(currentVel, currentDirectionNormal);
-	}
 
 	void Jump()
 	{
 		_isGrounded = false;
 		_rb.velocity = new Vector2(_rb.velocity.x, JumpForce);
 		StartCoroutine(Countdown(0.2f));
+	}
+
+	// ---------------------- HELPER METHODS START ----------------------
+
+	bool IsOnSlope(Vector2 normal)
+	{
+		var slope = Mathf.Abs(Vector2.Angle(normal, Vector2.up));
+		if (slope < WalkableSlopeAngle)
+		{
+			return false;
+		}
+		else { return true; }
+	}
+
+	void RotateTransformUp(Vector2 normal)
+	{
+		transform.up = Vector2.Lerp(transform.up, normal, AlignWithGroundSpeed * Time.deltaTime);
 	}
 
 	IEnumerator Countdown(float seconds)
@@ -199,4 +218,93 @@ public class SeniPhysicsController : MonoBehaviour
 
 		_movementBlocked = false;
 	}
+
+	float CalculateDotProduct()
+	{
+		Vector2 currentVel = _rb.velocity;
+		Vector2 currentDirection = transform.right;
+		Vector2 currentDirectionNormal = currentDirection.normalized;
+
+		return Vector2.Dot(currentVel, currentDirectionNormal);
+	}
+	// ---------------------- HELPER METHODS END----------------------
+
+
+	// ---------------------- OLD CODE START ----------------------
+
+	void DetectSlopeAndRotatePlayerOld()
+	{
+		Vector2 raycastOrigin = transform.position + transform.up * -0.48f;
+		RaycastHit2D hit = Physics2D.Raycast(raycastOrigin, -transform.up, 1f, CollisionMask);
+		Debug.DrawRay(raycastOrigin, -transform.up * 0.2f, Color.red, 0.01f);
+
+		_slopeAngle = -Vector2.Angle(hit.normal, Vector2.up);
+
+		if (hit.distance <= GroundRayTraceRange)
+		{
+			if (Mathf.Abs(_slopeAngle) < WalkableSlopeAngle)
+			{
+				_isSliding = false;
+				_isGrounded = hit;
+
+				//rotates player to surface normal
+				if (hit)
+				{
+					transform.up = hit.normal;
+				}
+				else
+				{
+					transform.up = Vector2.up;
+				}
+			}
+			else
+			{
+				if (DetectWalls())
+				{
+					_isSliding = true;
+				}
+				else
+				{
+					_isSliding = false;
+				}
+				_isGrounded = false;
+				transform.up = Vector2.up;
+			}
+		}
+		else
+		{
+			_isGrounded = false;
+			transform.up = Vector2.up;
+
+			if (DetectWalls())
+			{
+				_isSliding = true;
+			}
+			else
+			{
+				_isSliding = false;
+			}
+		}
+	}
+
+	bool DetectWalls()
+	{
+		bool check = false;
+		Vector2 raycastOrigin1 = transform.position + transform.right * 0.2f + transform.up * 0.5f;
+		RaycastHit2D hit1 = Physics2D.Raycast(raycastOrigin1, transform.right, 0.5f, CollisionMask);
+		Debug.DrawRay(raycastOrigin1, transform.right * 0.5f, Color.blue);
+
+		Vector2 raycastOrigin2 = transform.position + -transform.right * 0.2f + transform.up * 0.5f;
+		RaycastHit2D hit2 = Physics2D.Raycast(raycastOrigin2, -transform.right, 0.5f, CollisionMask);
+		Debug.DrawRay(raycastOrigin2, -transform.right * 0.5f, Color.yellow);
+
+		if (hit1 || hit2)
+		{
+			check = true;
+		}
+
+		return check;
+	}
+
+	// ---------------------- OLD CODE END ----------------------
 }
