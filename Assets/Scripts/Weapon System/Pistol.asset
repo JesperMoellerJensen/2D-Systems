@@ -17,8 +17,8 @@ MonoBehaviour:
   DamagePerBullet: 10
   FireRate: 7.1
   ClipSize: 30
-  Accuracy: 1
-  BulletsPerShot: 7
+  Accuracy: 0.889
+  BulletsPerShot: 4
   BulletSpread: 77.7
   Range: 6.01
   ReloadTime: 1

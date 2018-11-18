@@ -17,9 +17,7 @@ public class DebugGUI : MonoBehaviour {
 	
 		GUI.TextField(new Rect(20, 100, 110, 20), "Blocked	: " + controller.Debug_Blocked.ToString());
 
-		GUI.TextField(new Rect(20, 130, 110, 20), "Slope	: " + controller.Debug_Slope.ToString());
-
-		GUI.TextField(new Rect(20, 160, 110, 20), "Velocity	: " + controller.Debug_Velocity.ToString());
+		GUI.TextField(new Rect(20, 130, 110, 20), "Velocity	: " + controller.Debug_Velocity.ToString());
 
 	}
 }

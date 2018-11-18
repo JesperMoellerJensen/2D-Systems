@@ -10,11 +10,12 @@ public class SeniPhysicsController : MonoBehaviour
 	public bool Debug_Ground { get { return _isGrounded; } }
 	public bool Debug_Sliding { get { return _isSliding; } }
 	public bool Debug_Blocked { get { return _movementBlocked; } }
-	public float Debug_Slope { get { return _slopeAngle; } }
 	public float Debug_Velocity { get { return _rb.velocity.magnitude; } }
 	// ------------------- DEBUG -------------------
 
-	public float MaxSpeed = 10f;
+	public float MaxWalkSpeed = 5f;
+	public float MaxRunSpeed = 8f;
+	public float MaxCrouchSpeed = 3f;
 	public float Acceleration = 50f;
 	public float Deacceleration = 50f;
 	public float AirAcceleration = 10f;
@@ -25,9 +26,9 @@ public class SeniPhysicsController : MonoBehaviour
 	public LayerMask CollisionMask;
 
 	private Rigidbody2D _rb;
+    private CapsuleCollider2D _col;
 	private CharacterBodyRotation _bodyRotation;
 	private float _inputX;
-	private float _slopeAngle;
 	private bool _isGrounded;
 	private bool _movementBlocked;
 	private bool _isSliding;
@@ -35,6 +36,7 @@ public class SeniPhysicsController : MonoBehaviour
 	void Start()
 	{
 		_rb = GetComponent<Rigidbody2D>();
+	    _col = GetComponent<CapsuleCollider2D>();
 		_bodyRotation = GetComponentInChildren<CharacterBodyRotation>();
 	}
 
@@ -47,6 +49,14 @@ public class SeniPhysicsController : MonoBehaviour
 	{
 		_inputX = Input.GetAxisRaw("Horizontal");
 
+	    if (Input.GetKey(KeyCode.Q))
+	    {
+	        _col.size = new Vector2(_col.size.x,0.5f);
+	    }
+	    else
+	    {
+	        _col.size = new Vector2(_col.size.x, 1f);
+        }
 
 		if (_isGrounded && _isSliding == false)
 		{
@@ -74,14 +84,15 @@ public class SeniPhysicsController : MonoBehaviour
 				MoveAir();
 			}
 		}
-
-		//Debug.Log(_rb.velocity.magnitude);
 	}
 
 	void DetectSlopeAndRotatePlayer()
 	{
-		Vector2 raycastOriginLeft = transform.position + transform.right * -0.2f + transform.up * 0.25f;
-		Vector2 raycastOriginRight = transform.position + transform.right * 0.2f + transform.up * 0.25f;
+        Vector3 colliderSizeOffset = _col.transform.position + transform.up * _col.offset.y + transform.up * -_col.size.y / 2;
+
+
+        Vector2 raycastOriginLeft = colliderSizeOffset + transform.right * -0.2f + transform.up * 0.25f;
+		Vector2 raycastOriginRight = colliderSizeOffset + transform.right * 0.2f + transform.up * 0.25f;
 		RaycastHit2D hitLeft = Physics2D.Raycast(raycastOriginLeft, -transform.up, GroundRayTraceRange, CollisionMask);
 		RaycastHit2D hitRight = Physics2D.Raycast(raycastOriginRight, -transform.up, GroundRayTraceRange, CollisionMask);
 		Debug.DrawRay(raycastOriginLeft, -transform.up * GroundRayTraceRange, Color.red);
@@ -135,12 +146,10 @@ public class SeniPhysicsController : MonoBehaviour
 			if(avarageDistance < 0.3f)
 			{
 				_isGrounded = true;
-				Debug.Log("Yes " + avarageDistance);
 			}
 			else
 			{
 				_isGrounded = false;
-				Debug.Log("No " + avarageDistance);
 			}
 
 			if (LeftRayOnSlope && RightRayOnSlope)
@@ -163,7 +172,7 @@ public class SeniPhysicsController : MonoBehaviour
 	{
 		float dot = CalculateDotProduct();
 
-		float moveSpeed = Mathf.MoveTowards(dot, MaxSpeed * _inputX, Acceleration * Time.deltaTime);
+		float moveSpeed = Mathf.MoveTowards(dot, MaxWalkSpeed * _inputX, Acceleration * Time.deltaTime);
 		Vector2 myVel = new Vector2(transform.right.x, transform.right.y);
 		_rb.velocity = myVel * moveSpeed;
 		_bodyRotation.PlayerMoveDir = Mathf.RoundToInt(Mathf.Sign(_inputX));
@@ -181,7 +190,7 @@ public class SeniPhysicsController : MonoBehaviour
 
 	void MoveAir()
 	{
-		float moveX = Mathf.MoveTowards(_rb.velocity.x, MaxSpeed * _inputX, AirAcceleration * Time.deltaTime);
+		float moveX = Mathf.MoveTowards(_rb.velocity.x, MaxWalkSpeed * _inputX, AirAcceleration * Time.deltaTime);
 		_rb.velocity = new Vector2(moveX, _rb.velocity.y);
 		_bodyRotation.PlayerMoveDir = Mathf.RoundToInt(Mathf.Sign(_inputX));
 	}
