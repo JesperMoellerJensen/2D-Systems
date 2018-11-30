@@ -12,6 +12,8 @@ public enum WeaponType
 [CreateAssetMenu(menuName = "Obtainable Objects/Weapon")]
 public class WeaponObject : ScriptableObject
 {
+
+    public GameObject Projectile;
     public WeaponType WeaponType;
     public bool AutoFire = false;
     public bool Burst = false;

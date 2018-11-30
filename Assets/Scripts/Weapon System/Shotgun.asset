@@ -9,16 +9,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 559accdd351174e4da2e9f102f2f1728, type: 3}
-  m_Name: Pistol
+  m_Name: Shotgun
   m_EditorClassIdentifier: 
-  Projectile: {fileID: 1550884713462394, guid: 6968370ea40133841b51945755356247, type: 2}
+  Projectile: {fileID: 1550884713462394, guid: af266fba4637b6a41930f2400b1a883e, type: 2}
   WeaponType: 0
-  AutoFire: 1
-  Burst: 0
+  AutoFire: 0
+  Burst: 1
   DamagePerBullet: 10
   FireRate: 7.1
   ClipSize: 35
-  Accuracy: 1
+  Accuracy: 0.642
   BulletsPerShot: 4
   BulletSpread: 52.5
   Range: 6.01

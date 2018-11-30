@@ -75,7 +75,7 @@ public class SeniPhysicsController : MonoBehaviour
             {
                 Run();
             }
-            else
+            else if (_isCrouching == false)
             {
                 Walk();
             }
@@ -115,16 +115,20 @@ public class SeniPhysicsController : MonoBehaviour
     {
         if (crouch)
         {
-            _col.size = new Vector2(_col.size.x, 0.5f);
-            _currentMaxSpeed = MaxCrouchSpeed;
-            _isCrouching = true;
-            BodySprite.localScale = new Vector3(0.5f, 0.5f, 1);
+            if (_isCrouching == false)
+            {
+                _col.size = new Vector2(_col.size.x, 0.5f);
+                _currentMaxSpeed = MaxCrouchSpeed;
+                _isCrouching = true;
+                transform.position = transform.position + -transform.up * 0.25f;
+                BodySprite.localScale = new Vector3(0.5f, 0.5f, 1);
+            }
         }
         else
         {
             if (_isCrouching)
             {
-                Vector2 castOrigin = _col.transform.position + transform.up*1;
+                Vector2 castOrigin = _col.transform.position + transform.up * 1;
                 RaycastHit2D hit = Physics2D.CircleCast(castOrigin, 0.25f, transform.up, 0f, CollisionMask);
 
                 if (hit == false)
@@ -132,6 +136,7 @@ public class SeniPhysicsController : MonoBehaviour
                     _col.size = new Vector2(_col.size.x, 1f);
                     Walk();
                     _isCrouching = false;
+                    transform.position = transform.position + transform.up * 0.25f;
                     BodySprite.localScale = new Vector3(0.5f, 1, 1);
                 }
             }
